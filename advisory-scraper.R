@@ -6,6 +6,11 @@
 library(tidyverse)
 library(rvest)
 library(googlesheets4)
+library(ggmap)
+library(leaflet)
+
+# Import geocoded data
+geocode_roads <- read.csv("geocode-roads.csv")
 
 
 # All regions scraper ----
@@ -79,6 +84,16 @@ all$road_status <- road_status
 all$pavement_conditions <- pavement_conditions
 all$weather_conditions <- weather_conditions
 
+# Concatenate road details
+all <- all %>% 
+  mutate(road_details = paste0(road_name, " - ", road_exits)) %>% 
+  select(road_name, road_exits, road_details, road_status, pavement_conditions, weather_conditions)
+
+# Add geocoded data
+all <- left_join(all, geocode_roads, by = "road_details") %>% 
+  select(road_name.x, road_exits.x, road_details, exit_one, lat_exit_one, lon_exit_one, exit_two, lat_exit_two, lon_exit_two, road_status, pavement_conditions, weather_conditions) %>%
+  rename(road_name = road_name.x, road_exits = road_exits.x)
+
 
 # Albany region scraper ----
 
@@ -151,6 +166,52 @@ albany$road_status <- road_status
 albany$pavement_conditions <- pavement_conditions
 albany$weather_conditions <- weather_conditions
 
+# Concatenate road details
+albany <- albany %>% 
+  mutate(road_details = paste0(road_name, " - ", road_exits)) %>% 
+  select(road_name, road_exits, road_details, road_status, pavement_conditions, weather_conditions)
+
+# Add geocoded data
+albany <- left_join(albany, geocode_roads, by = "road_details") %>% 
+  select(road_name.x, road_exits.x, road_details, exit_one, lat_exit_one, lon_exit_one, exit_two, lat_exit_two, lon_exit_two, road_status, pavement_conditions, weather_conditions) %>%
+  rename(road_name = road_name.x, road_exits = road_exits.x)
+
+
+# Geocode ----
+ 
+# # Register Google API key
+# register_google(key = "my_key")
+# 
+# # Split exits into two points
+# all <- all %>%
+#   mutate(exit_one = paste0("Exit ", str_extract(road_exits, '(.*)\\s\\(.*\\)(?=\\sto)'), " "),
+#          exit_two = paste0("Exit ",str_extract(road_exits, '(?<=to\\s)(.*)\\s\\(.*\\)'), " ")) %>%
+#   select(road_name, road_exits, road_details, exit_one, exit_two)
+# 
+# # Geocode exit_one
+# all$coordinates <- geocode(paste(all$road_name, all$exit_one, "New York", "NY"))
+# all$lon_exit_one <- all$coordinates[[1]]
+# all$lat_exit_one <- all$coordinates[[2]]
+# all <- all %>%
+#   select(road_name, road_exits, road_details, exit_one, lat_exit_one, lon_exit_one, exit_two)
+# 
+# # Geocode exit_two
+# all$coordinates <- geocode(paste(all$road_name, all$exit_two, "New York", "NY"))
+# all$lon_exit_two <- all$coordinates[[1]]
+# all$lat_exit_two <- all$coordinates[[2]]
+# all <- all %>%
+#   select(road_name, road_exits, road_details, exit_one, lat_exit_one, lon_exit_one, exit_two, lat_exit_two, lon_exit_two)
+# 
+# # Test exit coordinates in a map
+# leaflet(all) %>%
+#   addTiles() %>%
+#   addMarkers(~lon_exit_one, ~lat_exit_one, popup = ~road_details) %>%
+#   addMarkers(~lon_exit_two, ~lat_exit_two, popup = ~road_details)
+# 
+# # Save and export geocoded roads and comment code for future use as needed
+# write.csv(all, "geocode-roads.csv", row.names=FALSE)
+# sheet_write(all, ss = "link", sheet = "geocode")
+ 
 
 # Export ----
 
@@ -160,3 +221,4 @@ gs4_auth("email")
 # Export data to Google Sheet
 sheet_write(all, ss = "link", sheet = "all")
 sheet_write(albany, ss = "link", sheet = "albany")
+
